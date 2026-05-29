@@ -1,56 +1,39 @@
-// 作业5：多档位触摸调速呼吸灯
 #define TOUCH_PIN 4
-#define LED_PIN 2
+#define LED_PIN   2
 
-// PWM配置（与实验3一致）
 const int freq = 5000;
 const int resolution = 8;
-
 const int threshold = 700;
-int speedLevel = 1;          // 速度档位：1(慢)→2(中)→3(快)
-bool lastTouchState = false;
-unsigned long lastDebounceTime = 0;
-const unsigned long debounceDelay = 50;
+const int debounceDelay = 50; 
+
+bool ledOn = false; // false=灭，true=亮
 
 void setup() {
   Serial.begin(115200);
-  ledcAttach(LED_PIN, freq, resolution); // 绑定PWM通道
+  ledcAttach(LED_PIN, freq, resolution);
+  ledcWrite(LED_PIN, 255); // 强制初始熄灭
+  Serial.println("极简触摸开关（已加防抖）");
+  Serial.println("摸一下亮，再摸一下灭");
 }
 
 void loop() {
-  // 触摸检测与档位切换
-  int touchValue = touchRead(TOUCH_PIN);
-  bool currentTouchState = (touchValue < threshold);
+  int touchVal = touchRead(TOUCH_PIN);
+  Serial.printf("触摸值：%d\n", touchVal);
 
-  if (currentTouchState != lastTouchState) {
-    lastDebounceTime = millis();
-  }
 
-  if ((millis() - lastDebounceTime) > debounceDelay) {
-    if (currentTouchState && !lastTouchState) {
-      speedLevel++;
-      if (speedLevel > 3) speedLevel = 1; // 循环切换
+  if (touchVal < threshold) {
+    delay(debounceDelay); 
+    if (touchRead(TOUCH_PIN) < threshold) { 
+      
+      ledOn = !ledOn;
+      ledcWrite(LED_PIN, ledOn ? 0 : 255); 
+      Serial.printf(" 翻转！LED现在：%s\n", ledOn ? "亮" : "灭");
+
+      while (touchRead(TOUCH_PIN) < threshold) {
+        delay(10);
+      }
     }
   }
 
-  lastTouchState = currentTouchState;
-
-  // 根据档位设置呼吸速度
-  int delayTime;
-  switch (speedLevel) {
-    case 1: delayTime = 20; break;
-    case 2: delayTime = 10; break;
-    case 3: delayTime = 5;  break;
-  }
-
-  // 呼吸灯效果
-  for (int duty = 0; duty <= 255; duty++) {
-    ledcWrite(LED_PIN, duty);
-    delay(delayTime);
-  }
-  for (int duty = 255; duty >= 0; duty--) {
-    ledcWrite(LED_PIN, duty);
-    delay(delayTime);
-  }
+  delay(50);
 }
-

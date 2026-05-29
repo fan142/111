@@ -1,4 +1,4 @@
-// 作业8：millis()实现SOS求救信号
+// millis()实现SOS求救信号
 // 标准：三短(200ms) 三长(600ms) 三短(200ms)，间隔200ms，循环停顿2000ms
 const int ledPin = 2;
 
