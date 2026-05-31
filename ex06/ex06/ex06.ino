@@ -1,27 +1,40 @@
-// 作业6：警车双闪灯效（双通道PWM）
-#define LED_A_PIN 2  // 板载LED
-#define LED_B_PIN 13 // 外接LED（串联220Ω电阻接GND）
+// ESP32 警车双闪灯效 (双通道PWM) ex06作业 
 
-const int freq = 5000;
-const int resolution = 8;
+// 引脚定义
+const int led1Pin = 2;  // 第一个LED引脚
+const int led2Pin = 4;  // 第二个LED引脚
+
+// 呼吸灯变量
+int brightness = 0;     // LED1的亮度(0~255)
+int fadeStep = 1;       // 亮度变化步长
+unsigned long lastFadeTime = 0;
+const int fadeInterval = 10; // 亮度更新间隔(ms)，数值越小闪烁越快
 
 void setup() {
   Serial.begin(115200);
-  // 初始化两个独立的PWM通道
-  ledcAttach(LED_A_PIN, freq, resolution);
-  ledcAttach(LED_B_PIN, freq, resolution);
+  pinMode(led1Pin, OUTPUT);
+  pinMode(led2Pin, OUTPUT);
+  
+  Serial.println("ESP32 双通道PWM警车双闪启动");
 }
 
 void loop() {
-  // 核心：两个LED占空比反相
-  for (int duty = 0; duty <= 255; duty++) {
-    ledcWrite(LED_A_PIN, duty);       // A从0→255（变亮）
-    ledcWrite(LED_B_PIN, 255 - duty); // B从255→0（变暗）
-    delay(10);
-  }
-  for (int duty = 255; duty >= 0; duty--) {
-    ledcWrite(LED_A_PIN, duty);
-    ledcWrite(LED_B_PIN, 255 - duty);
-    delay(10);
+  // 非阻塞式渐变
+  if (millis() - lastFadeTime >= fadeInterval) {
+    lastFadeTime = millis();
+    
+    // 更新LED1的亮度
+    brightness += fadeStep;
+    
+    // 到达亮度边界时反转方向
+    if (brightness <= 0 || brightness >= 255) {
+      fadeStep = -fadeStep;
+      brightness = constrain(brightness, 0, 255); // 防止溢出
+    }
+    
+    // 核心逻辑：两个LED亮度完全反相
+    // 当灯A从0增加到255时，灯B恰好从255减小到0
+    analogWrite(led1Pin, brightness);
+    analogWrite(led2Pin, 255 - brightness);
   }
 }
